@@ -1,0 +1,92 @@
+{
+  "context_mode": {
+    "type": "string",
+    "description": "上下文模式",
+    "hint": "minimal=只发最新消息 | balanced=保留最近N轮+压缩 | full=不过滤",
+    "default": "minimal"
+  },
+  "preserve_recent_turns": {
+    "type": "int",
+    "description": "保留最近轮数",
+    "hint": "均衡模式下保留最近N轮对话不压缩",
+    "default": 1,
+    "min": 0,
+    "max": 5
+  },
+  "compress_method": {
+    "type": "string",
+    "description": "压缩引擎",
+    "hint": "tfidf=本地零成本 | llm=用LLM做智能压缩 | llm+tfidf=LLM优先失败回退TF-IDF",
+    "default": "tfidf"
+  },
+  "compress_provider_id": {
+    "type": "string",
+    "description": "压缩用的LLM Provider",
+    "hint": "留空=使用默认provider。插件启动时会在日志中打印可用的Provider列表，按名称填写即可",
+    "default": ""
+  },
+  "compress_ratio": {
+    "type": "float",
+    "description": "压缩保留比例",
+    "hint": "TF-IDF模式下保留内容的比例（0.1-0.9），越低越激进",
+    "default": 0.3,
+    "min": 0.1,
+    "max": 0.9
+  },
+  "max_compressed_tokens": {
+    "type": "int",
+    "description": "压缩后最大Token数",
+    "hint": "压缩摘要的长度上限",
+    "default": 200,
+    "min": 50,
+    "max": 2000
+  },
+  "confusion_threshold": {
+    "type": "float",
+    "description": "困惑检测阈值",
+    "hint": "越低越敏感，LLM越容易触发自动展开上下文",
+    "default": 0.5,
+    "min": 0.1,
+    "max": 1.0
+  },
+  "max_expand_retries": {
+    "type": "int",
+    "description": "最大展开次数",
+    "hint": "同一会话内自动展开上下文的最大次数，防止无限循环",
+    "default": 2,
+    "min": 0,
+    "max": 5
+  },
+  "remove_tool_calls": {
+    "type": "bool",
+    "description": "过滤工具调用",
+    "hint": "移除assistant消息中的tool_calls字段",
+    "default": true
+  },
+  "remove_tool_results": {
+    "type": "bool",
+    "description": "过滤工具结果",
+    "hint": "移除role=tool的消息",
+    "default": true
+  },
+  "max_history_entries": {
+    "type": "int",
+    "description": "最大历史记录数",
+    "hint": "内存中保留的对话历史条数上限",
+    "default": 200,
+    "min": 50,
+    "max": 1000
+  },
+  "log_optimization": {
+    "type": "bool",
+    "description": "调试日志",
+    "hint": "记录每次优化的详细信息，排查问题时开启",
+    "default": false
+  },
+  "show_token_stats": {
+    "type": "bool",
+    "description": "Token统计",
+    "hint": "在每次回复末尾显示Token消耗：发送/返回/节省",
+    "default": false
+  }
+}
