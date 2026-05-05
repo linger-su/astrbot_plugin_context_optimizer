@@ -101,22 +101,24 @@ class ContextOptimizerPlugin(Star):
         self._log_available_providers()
 
     def _log_available_providers(self):
-        """打印所有可用的 provider"""
+        """打印所有可用的 provider 及其模型"""
         try:
-            providers = self.context.get_providers()
+            providers = list(self.context.get_all_providers() or [])
             if providers:
-                names = []
                 for p in providers:
                     name = getattr(p, 'name', None) or getattr(p, 'provider_name', None) or str(p)
-                    names.append(name)
+                    # 尝试获取模型列表
+                    model = getattr(p, 'model', None) or getattr(p, 'model_id', None) or ''
+                    model = str(model).strip() if model else '未知'
+                    logger.info(f"[上下文优化器] Provider: {name} | 模型: {model}")
                 logger.info(
-                    f"[上下文优化器] 可用 LLM Provider: {', '.join(names)} | "
+                    f"[上下文优化器] 共 {len(providers)} 个 Provider | "
                     f"将 compress_provider_id 设为上述名称之一，或留空使用默认"
                 )
+            else:
+                logger.info("[上下文优化器] 未发现已配置的 Provider，压缩将使用 TF-IDF")
         except Exception as e:
             logger.debug(f"[上下文优化器] 获取 Provider 列表失败: {e}")
-
-    # ========== Provider 获取 ==========
 
     def _get_compress_provider(self):
         """获取用于压缩的 LLM provider"""
@@ -124,20 +126,32 @@ class ContextOptimizerPlugin(Star):
             return self._llm_provider
 
         try:
+            # 优先用指定 ID 匹配
             if self.compress_provider_id:
-                self._llm_provider = self.context.get_provider(self.compress_provider_id)
-            else:
-                self._llm_provider = self.context.get_provider()
+                providers = list(self.context.get_all_providers() or [])
+                for p in providers:
+                    name = getattr(p, 'name', None) or getattr(p, 'provider_name', None) or ''
+                    if str(name).strip().lower() == self.compress_provider_id.strip().lower():
+                        self._llm_provider = p
+                        model = getattr(p, 'model', None) or ''
+                        logger.info(f"上下文优化器：匹配 Provider [{name}] 模型={model}")
+                        return self._llm_provider
+                # 没匹配到，用默认
+                logger.warning(f"上下文优化器：未找到名为 '{self.compress_provider_id}' 的 Provider，使用默认")
 
-            if self._llm_provider:
-                provider_name = getattr(self._llm_provider, 'name', 'unknown')
-                logger.info(f"上下文优化器：已获取 LLM provider - {provider_name}")
-            else:
-                logger.warning("上下文优化器：未找到可用 LLM provider，回退到 TF-IDF")
+            # 使用默认 provider
+            providers = list(self.context.get_all_providers() or [])
+            if providers:
+                self._llm_provider = providers[0]
+                name = getattr(self._llm_provider, 'name', 'unknown')
+                model = getattr(self._llm_provider, 'model', None) or ''
+                logger.info(f"上下文优化器：使用默认 Provider [{name}] 模型={model}")
+                return self._llm_provider
 
-            return self._llm_provider
+            logger.warning("上下文优化器：未找到可用 Provider，回退到 TF-IDF")
+            return None
         except Exception as e:
-            logger.warning(f"上下文优化器：获取 LLM provider 失败: {e}")
+            logger.warning(f"上下文优化器：获取 Provider 失败: {e}")
             return None
 
     async def _llm_compress(self, text: str) -> Optional[str]:
@@ -167,10 +181,10 @@ class ContextOptimizerPlugin(Star):
 压缩后的摘要："""
 
         try:
-            response = await provider.chat([{
-                "role": "user",
-                "content": compress_prompt,
-            }])
+            response = await provider.text_chat(
+                prompt=compress_prompt,
+                system_prompt="你是一个文本压缩助手，擅长提炼关键信息。",
+            )
 
             if response and hasattr(response, 'completion'):
                 result = response.completion
