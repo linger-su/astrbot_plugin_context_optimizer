@@ -1,6 +1,6 @@
 name: astrbot_plugin_context_optimizer
 display_name: 上下文优化器 v2
 desc: 极致省token上下文优化器：默认只发最新消息给LLM，LLM看不懂时自动补上下文。支持极简/均衡/完整三种模式。
-version: v2.2.0
+version: v2.2.1
 author: AutoClaw
 repo: https://github.com/linger-su/astrbot_plugin_context_optimizer
