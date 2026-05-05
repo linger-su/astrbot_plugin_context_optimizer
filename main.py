@@ -212,11 +212,13 @@ class ContextOptimizerPlugin(Star):
 
             # 记录优化前的 token 估算
             original_tokens = self._estimate_tokens(req)
+            original_count = len(req.contexts)
 
             # --- full 模式 ---
             if self.mode == "full":
                 req.contexts = self._basic_clean(req.contexts)
                 self._save_request_snapshot(session_key, original_tokens, req)
+                logger.info(f"[上下文优化] full模式: {original_count}条 → {len(req.contexts)}条")
                 return
 
             # --- 检测上一轮困惑 ---
@@ -227,15 +229,16 @@ class ContextOptimizerPlugin(Star):
                 req.contexts = await self._build_expanded_context(req)
                 state["sent_minimal"] = False
                 self._stats["expand_triggers"] += 1
-                if self.log_optimization:
-                    logger.info(f"[上下文优化] session={session_key} 检测到困惑，展开上下文 (第{state['expand_count']}次)")
+                logger.info(f"[上下文优化] 展开上下文(第{state['expand_count']}次): {original_count}条 → {len(req.contexts)}条")
             elif self.mode == "minimal":
                 req.contexts = self._build_minimal_context(req)
                 state["sent_minimal"] = True
                 state["expand_count"] = 0
                 self._stats["minimal_sends"] += 1
+                logger.info(f"[上下文优化] 极简模式: {original_count}条 → {len(req.contexts)}条")
             else:
                 req.contexts = await self._build_balanced_context(req)
+                logger.info(f"[上下文优化] 均衡模式: {original_count}条 → {len(req.contexts)}条")
 
             # 保存快照
             self._save_request_snapshot(session_key, original_tokens, req)
